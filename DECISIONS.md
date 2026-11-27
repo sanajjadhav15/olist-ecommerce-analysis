@@ -22,7 +22,7 @@ A log of data problems I found and the choices I made.
   - Orders with no match: 775 with no items (603 unavailable, 164 canceled, 5 created, 2 invoiced, 1 shipped), 1 with no payment row, 768 with no review.
 - **Problem:** joining these tables directly to orders multiplies rows unevenly (only multi-row orders are inflated), so order-level totals would be wrong. Inner joins also silently drop orders with no match.
 - **Options:** join directly and fix later, or aggregate each table to one row per order first.
-- **Chose:** aggregate to order level before joining, start from orders with LEFT JOIN, and compare COUNT(*) before and after every join. Grain: order_items = order_id + order_item_id, order_payments = order_id + payment_sequential, order_reviews = review_id + order_id.
+- **Chose:** aggregate to order level before joining, start from orders with LEFT JOIN where orders with no match matter, and compare COUNT(*) before and after every join. Sum a column only if its own table has not been multiplied by another join. Grain: order_items = order_id + order_item_id, order_payments = order_id + payment_sequential, order_reviews = review_id + order_id.
 
 ## 4. A review does not mean the order was delivered
 - **Saw:** the dataset description says the survey is sent on delivery or when the estimated date passes, whichever is first.
@@ -36,11 +36,11 @@ A log of data problems I found and the choices I made.
 - **Options:** keep them and get NULLs, or filter on the date being not null.
 - **Chose:** filter on order_delivered_customer_date is not null (excludes 8) for Q4 and Q5. Approved and carrier dates are not used there, so those gaps do not matter unless I later split delays into seller time and carrier time.
 
-## 6. Order statuses and partial months
-- **Saw:** 8 statuses: delivered 96,478, shipped 1,107, canceled 625, unavailable 609, invoiced 314, processing 301, created 5, approved 2. Data runs from 2016-09 to 2018-10. Sep 2016 and Oct 2018 have 4 orders each, and Nov 2016 has none.
-- **Problem:** canceled and unavailable orders are not real sales, and thin edge months would show fake growth or decline.
-- **Options:** (a) include all statuses, (b) delivered only, (c) exclude only canceled and unavailable.
-- **Chose:** (c) for revenue questions (Q1, Q2, Q3), because shipped, invoiced and processing orders are real sales in progress and the 775 orders with no items add no revenue anyway. For trend questions (Q1, Q7, Q8), exclude Sep 2016 and Oct 2018 and flag any other thin month I find in my monthly counts. Delivery questions (Q4, Q5) are a separate rule: delivered with a delivered date (entry 5).
+## 6. Order statuses and thin months
+- **Saw:** 8 statuses: delivered 96,478, shipped 1,107, canceled 625, unavailable 609, invoiced 314, processing 301, created 5, approved 2. Data runs from 2016-09 to 2018-10. Sep 2016 has 4 orders, Oct 2016 324, Nov 2016 none, Dec 2016 1, Sep 2018 16, Oct 2018 4.
+- **Problem:** canceled and unavailable orders are not real sales. Thin months show fake growth or decline. LAG compares with the previous row, not the previous calendar month, so a gap in the series makes the growth figure meaningless.
+- **Options:** (a) include all statuses, (b) delivered only, (c) exclude only canceled and unavailable. For months: keep everything, drop only empty months, or use a minimum-orders rule and a contiguous series.
+- **Chose:** (c) for revenue questions (Q1, Q2, Q3), because shipped, invoiced and processing orders are real sales in progress and the 775 orders with no items add no revenue anyway. For trend questions (Q1, Q7, Q8), use only months with at least 100 orders and keep the series contiguous: Jan 2017 to Aug 2018. Oct 2016 is excluded because Nov and Dec 2016 break the series. Delivery questions (Q4, Q5) use a separate rule: delivered with a delivered date (entry 5).
 
 ## 7. Duplicate reviews per order
 - **Saw:** 551 extra review rows because some orders have more than one review.
