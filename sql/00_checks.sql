@@ -93,10 +93,15 @@ from (
 -- Found: 8 statuses. delivered 96,478, shipped 1,107, canceled 625, unavailable 609,
 -- invoiced 314, processing 301, created 5, approved 2 (total 99,441).
 -- This list drives which statuses count as revenue (DECISIONS.md entry 6).
-select order_status, count(*) as total_count
-from orders
-group by order_status
-order by total_count desc;
+select
+	order_status,
+	count(*) as total_count
+from
+	orders
+group by
+	order_status
+order by
+	total_count desc;
 
 -- Check 9: order date range
 -- Tests: when were the earliest and latest purchases?
