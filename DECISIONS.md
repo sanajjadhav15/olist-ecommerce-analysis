@@ -53,3 +53,9 @@ A log of data problems I found and the choices I made.
 - **Problem:** review_id alone is not a key. Treating it as unique would undercount reviews or break joins.
 - **Options:** deduplicate on review_id, or deduplicate per order_id.
 - **Chose:** deduplicate per order_id (entry 7), since Q5 analyses orders. Each of those orders did receive that review, so keeping the review on each order is consistent. The limitation: one review may cover several orders, so those orders are not fully independent observations.
+
+## 9. Uncategorised and untranslated product categories
+- **Saw:** 610 products have no category name, and 2 categories (pc_gamer and portateis_cozinha_e_preparadores_de_alimentos) have no English translation. The category join is many-to-one (71 translation rows, 71 distinct names).
+- **Problem:** an inner join would silently drop the revenue of uncategorised products, and the 2 untranslated categories would show NULL names.
+- **Options:** inner join and lose that revenue, label them 'Other', or keep them with a fallback label and report them separately.
+- **Chose:** left joins with COALESCE (English name, then Portuguese name, then 'Uncategorised'). Uncategorised revenue is R$178,572.55, ranked 21st, so it does not displace a top-10 category. Percentages use the revenue of all categories, including Uncategorised, as the denominator.
